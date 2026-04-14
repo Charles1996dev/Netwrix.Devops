@@ -1,0 +1,113 @@
+name: Build and Deploy
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  id-token: write
+  contents: read
+
+env:
+  TF_WORKING_DIR: terraform
+  APP_SOLUTION_PATH: Netwrix.DevOps.Test.sln
+  APP_PROJECT_PATH: Netwrix.DevOps.Test.App
+  APP_ARTIFACT_NAME: Netwrix.DevOps.Test.App.zip
+
+jobs:
+  terraform:
+    name: Terraform Plan/Apply
+    runs-on: ubuntu-latest
+    environment: dev
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Azure Login (OIDC)
+        uses: azure/login@v2
+        with:
+          client-id: ${{ secrets.AZURE_CLIENT_ID }}
+          tenant-id: ${{ secrets.AZURE_TENANT_ID }}
+          subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v3
+
+      - name: Terraform Fmt
+        run: terraform fmt -check -recursive
+
+      - name: Terraform Init
+        working-directory: ${{ env.TF_WORKING_DIR }}
+        run: terraform init -backend-config=backend.hcl
+
+      - name: Terraform Validate
+        working-directory: ${{ env.TF_WORKING_DIR }}
+        run: terraform validate
+
+      - name: Terraform Security Scan (tfsec)
+        uses: aquasecurity/tfsec-action@v1.0.3
+        with:
+          working_directory: ${{ env.TF_WORKING_DIR }}
+
+      - name: Terraform Plan
+        working-directory: ${{ env.TF_WORKING_DIR }}
+        run: |
+          terraform plan -out tfplan \
+            -var "db_admin_password=${{ secrets.TF_DB_ADMIN_PASSWORD }}"
+
+      - name: Terraform Apply (main only)
+        if: github.ref == 'refs/heads/main' && github.event_name != 'pull_request'
+        working-directory: ${{ env.TF_WORKING_DIR }}
+        run: terraform apply -auto-approve tfplan
+
+  build-and-deploy-app:
+    name: Build and Deploy .NET App
+    runs-on: ubuntu-latest
+    environment: dev
+    needs: terraform
+    if: github.ref == 'refs/heads/main' && github.event_name != 'pull_request'
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Azure Login (OIDC)
+        uses: azure/login@v2
+        with:
+          client-id: ${{ secrets.AZURE_CLIENT_ID }}
+          tenant-id: ${{ secrets.AZURE_TENANT_ID }}
+          subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+
+      - name: Setup .NET SDK
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: "10.0.x"
+
+      - name: Restore
+        run: dotnet restore ${{ env.APP_SOLUTION_PATH }}
+
+      - name: Build
+        run: dotnet build ${{ env.APP_SOLUTION_PATH }} --configuration Release --no-restore
+
+      - name: Publish
+        run: dotnet publish ${{ env.APP_PROJECT_PATH }} --configuration Release --output publish
+
+      - name: Create zip artifact
+        run: |
+          cd publish
+          zip -r "../${{ env.APP_ARTIFACT_NAME }}" .
+
+      - name: Resolve target Web App from Terraform output
+        id: tfout
+        working-directory: ${{ env.TF_WORKING_DIR }}
+        run: |
+          WEB_APP_NAME=$(terraform output -raw web_app_name)
+          echo "web_app_name=$WEB_APP_NAME" >> "$GITHUB_OUTPUT"
+
+      - name: Deploy to Azure Web App
+        uses: azure/webapps-deploy@v3
+        with:
+          app-name: ${{ steps.tfout.outputs.web_app_name }}
+          package: ${{ env.APP_ARTIFACT_NAME }}

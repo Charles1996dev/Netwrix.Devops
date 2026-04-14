@@ -1,0 +1,11 @@
+project_name                  = "netwrix-devops-test"
+environment                   = "dev"
+location                      = "westeurope"
+db_admin_username             = "pgadminuser"
+db_admin_password             = "REPLACE_ME"
+allowed_cidr_for_admin_access = "203.0.113.10/32"
+
+tags = {
+  owner       = "candidate"
+  cost_center = "assessment"
+}
