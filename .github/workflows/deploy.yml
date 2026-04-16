@@ -14,7 +14,7 @@ permissions:
 env:
   TF_WORKING_DIR: terraform
   APP_SOLUTION_PATH: Netwrix.DevOps.Test.sln
-  APP_PROJECT_PATH: Netwrix.DevOps.Test.App
+  APP_PROJECT_PATH: Netwrix.DevOps.Test.App/Netwrix.DevOps.Test.App.csproj
   APP_ARTIFACT_NAME: Netwrix.DevOps.Test.App.zip
 
 jobs:
