@@ -5,6 +5,9 @@ This repository contains a complete starter implementation for the assessment:
 - Architecture proposal: `docs/architecture.md`
 - Infrastructure as Code: `terraform/`
 - CI/CD pipeline: `.github/workflows/deploy.yml`
+- Minimal sample .NET 10 app and solution using the required assessment names:
+  - `Netwrix.DevOps.Test.sln`
+  - `Netwrix.DevOps.Test.App` (published as `Netwrix.DevOps.Test.App.zip`)
 
 ## What this deploys
 
@@ -125,10 +128,10 @@ Then push to GitHub and let the workflow run.
 Pipeline builds:
 
 - Solution: `Netwrix.DevOps.Test.sln`
-- Project: `Netwrix.DevOps.Test.App`
+- Project: `Netwrix.DevOps.Test.App/Netwrix.DevOps.Test.App.csproj`
 - Artifact: `Netwrix.DevOps.Test.App.zip`
 
-If your actual app path differs, update `APP_PROJECT_PATH` in the workflow.
+If you replace the sample app with a real one, keep the same naming or update `APP_SOLUTION_PATH` / `APP_PROJECT_PATH` in the workflow.
 
 ### 10) Post-deploy validation
 

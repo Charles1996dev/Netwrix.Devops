@@ -142,8 +142,6 @@ resource "azurerm_linux_web_app" "app" {
     ftps_state                             = "Disabled"
     minimum_tls_version                    = "1.2"
     vnet_route_all_enabled                 = true
-    application_insights_key               = azurerm_application_insights.main.instrumentation_key
-    application_insights_connection_string = azurerm_application_insights.main.connection_string
 
     application_stack {
       dotnet_version = "8.0"
@@ -366,11 +364,6 @@ resource "azurerm_monitor_diagnostic_setting" "appgw" {
   enabled_log {
     category = "ApplicationGatewayFirewallLog"
   }
-
-  metric {
-    category = "AllMetrics"
-    enabled  = true
-  }
 }
 
 resource "azurerm_monitor_diagnostic_setting" "appservice" {
@@ -384,10 +377,5 @@ resource "azurerm_monitor_diagnostic_setting" "appservice" {
 
   enabled_log {
     category = "AppServiceConsoleLogs"
-  }
-
-  metric {
-    category = "AllMetrics"
-    enabled  = true
   }
 }
